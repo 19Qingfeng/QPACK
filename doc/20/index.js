@@ -12,7 +12,7 @@ const modules = {
       age: () => age,
     });
     const age = 'age';
-    const DEFAULT_EXPORT = title;
+    const DEFAULT_EXPORT = 'title';
   },
 };
 
@@ -37,10 +37,25 @@ require.r = (exports) => {
   if (typeof Symbol !== 'undefined' && Symbol.toStringTag) {
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'module' });
   }
-  Object.defineProperty(exports, '_esModule', { value: true });
+  Object.defineProperty(exports, '__esModule', { value: true });
 };
+
+// 定义模块导出属性
+require.d = (exports, definition) => {
+  for (let key in definition) {
+    if (!require.o(exports, key) && require.o(definition, key)) {
+      Object.defineProperty(exports, key, {
+        get: definition[key],
+      });
+    }
+  }
+};
+
+// 检查对象上(不包含原型)是否存在该属性
+require.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 
 // 入口文件内容
 const title = require('./src/title.js');
+console.log(title);
 console.log(title.default);
 console.log(title.age);
