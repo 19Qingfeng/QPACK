@@ -1,5 +1,5 @@
 /* 
-  ES6模块导出
+  ES6模块导出 commonjs加载
 */
 
 const modules = {
