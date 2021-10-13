@@ -1,0 +1,28 @@
+{
+  "name": "QPack",
+  "version": "1.0.0",
+  "description": "Webpack源码解析.",
+  "main": "wepback.config.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/19Qingfeng/QPACK.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/19Qingfeng/QPACK/issues"
+  },
+  "homepage": "https://github.com/19Qingfeng/QPACK#readme",
+  "dependencies": {
+    "@babel/core": "^7.15.8",
+    "@babel/plugin-transform-arrow-functions": "^7.14.5",
+    "@babel/types": "^7.15.6"
+  }
+}
