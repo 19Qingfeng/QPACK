@@ -16,7 +16,7 @@
 
 // babel核心转化库 包含core -》 AST -》 code的转化实现
 /* 
-  babel/core 其实就可以相当于 es
+  babel/core 其实就可以相当于 esprima+Estraverse+Escodegen
   它会将原本的sourceCode转化为AST语法树
   遍历老的语法树
   遍历老的语法树时候 会检查传入的插件/或者第三个参数中传入的`visitor`
@@ -32,7 +32,7 @@ const babelTypes = require('@babel/types');
 // 转化箭头函数的插件
 const arrowFunction = require('@babel/plugin-transform-arrow-functions');
 
-const sourceCode = "const a = () => console.log('Hello World')";
+const sourceCode = "const a = () => console.log(this)";
 
 const targetCode = babel.transform(sourceCode, {
   plugins: [arrowFunction],
@@ -45,18 +45,54 @@ const targetCode = babel.transform(sourceCode, {
 const arrowFunctionPlugin = {
   visitor: {
     // 当语法树遍历到节点为arrowFunctionExpression时
+    // path可以理解为节点路径 这个路径上很多个相关该路径上的节点信息
     ArrowFunctionExpression(path) {
-      const node = path.node;
-      if (node.type === 'arrowFunctionExpression') {
-        // 将改节点变成普通函数
-        node.type = 'FunctionDeclaration';
+      function hoistFunctionEnvironment(nodePath) {
+        // 往上查找 直到找到最近顶部非箭头函数的this p.isFunction() && !p.isArrowFunctionExpression()
+        // 或者找到跟节点 p.isProgram()
+        const thisEnvFn = nodePath.findParent((p) => {
+          return (
+            (p.isFunction() && !p.isArrowFunctionExpression()) || p.isProgram()
+          );
+        });
+        return thisEnvFn;
       }
+      const bingThis = hoistFunctionEnvironment(path);
+      const thisPaths = getScopeInfoInformation(bingThis);
+      console.log(thisPaths[0].type);
+      // const node = path.node;
+      // if (node.type === 'arrowFunctionExpression') {
+      //   // 将改节点变成普通函数
+      //   node.type = 'FunctionDeclaration';
+      // }
     },
   },
 };
+
+function getScopeInfoInformation(nodePath) {
+  const thisPaths = [];
+  nodePath.traverse({
+    // 深度遍历节点路径 找到内部this语句
+    ThisExpression(thisPath) {
+      thisPaths.push(thisPath);
+    },
+  });
+  return thisPaths;
+}
 
 const targetCode2 = babel.transform(sourceCode, {
   plugins: [arrowFunctionPlugin],
 });
 
-console.log(targetCode2.code);
+const a = () => {
+  console.log(this, 'this');
+  function b() {
+    console.log(this, 'this');
+  }
+};
+
+const babelTypes = require('@babel/types');
+
+console.log(babelTypes.thisExpression())
+
+console.log(babelTypes.identifier('hello'))
