@@ -32,67 +32,23 @@ const babelTypes = require('@babel/types');
 // 转化箭头函数的插件
 const arrowFunction = require('@babel/plugin-transform-arrow-functions');
 
-const sourceCode = "const a = () => console.log(this)";
+// 自定义转化箭头函数插件
+const { arrowFunctionPlugin } = require('./arrow-function-expression')
+
+
+const sourceCode = `const a = () => {
+  console.log(this)
+  const innerA = () => {
+    console.log(this)
+  }
+}`;
 
 const targetCode = babel.transform(sourceCode, {
   plugins: [arrowFunction],
 });
 
-// 简单的babel插件 先不涉及箭头函数中的this
-// 所谓的babel插件就是一个对象
-// 存在一个定死的属性 visitor
-// visitor中会根据key去匹配对应的节点
-const arrowFunctionPlugin = {
-  visitor: {
-    // 当语法树遍历到节点为arrowFunctionExpression时
-    // path可以理解为节点路径 这个路径上很多个相关该路径上的节点信息
-    ArrowFunctionExpression(path) {
-      function hoistFunctionEnvironment(nodePath) {
-        // 往上查找 直到找到最近顶部非箭头函数的this p.isFunction() && !p.isArrowFunctionExpression()
-        // 或者找到跟节点 p.isProgram()
-        const thisEnvFn = nodePath.findParent((p) => {
-          return (
-            (p.isFunction() && !p.isArrowFunctionExpression()) || p.isProgram()
-          );
-        });
-        return thisEnvFn;
-      }
-      const bingThis = hoistFunctionEnvironment(path);
-      const thisPaths = getScopeInfoInformation(bingThis);
-      console.log(thisPaths[0].type);
-      // const node = path.node;
-      // if (node.type === 'arrowFunctionExpression') {
-      //   // 将改节点变成普通函数
-      //   node.type = 'FunctionDeclaration';
-      // }
-    },
-  },
-};
-
-function getScopeInfoInformation(nodePath) {
-  const thisPaths = [];
-  nodePath.traverse({
-    // 深度遍历节点路径 找到内部this语句
-    ThisExpression(thisPath) {
-      thisPaths.push(thisPath);
-    },
-  });
-  return thisPaths;
-}
-
 const targetCode2 = babel.transform(sourceCode, {
   plugins: [arrowFunctionPlugin],
 });
 
-const a = () => {
-  console.log(this, 'this');
-  function b() {
-    console.log(this, 'this');
-  }
-};
-
-const babelTypes = require('@babel/types');
-
-console.log(babelTypes.thisExpression())
-
-console.log(babelTypes.identifier('hello'))
+console.log(targetCode2.code,'targetCode2')
