@@ -1,5 +1,6 @@
-const transformClass = require('@babel/plugin-transform-classes');
+// const transformClass = require('@babel/plugin-transform-classes');
 const core = require('@babel/core');
+const { transformClassPlugin } = require('./plugin-transform-classes');
 
 const sourceCode = `
   class Person {
@@ -12,8 +13,13 @@ const sourceCode = `
   }
 `;
 
+
 const parseCode = core.transform(sourceCode, {
-  plugins: [transformClass],
+  plugins: [
+    transformClassPlugin({
+      name: 'wang.haoyu',
+    }),
+  ],
 });
 
-console.log(parseCode.code, 'parseCode');
+// console.log(parseCode.code, 'parseCode');
