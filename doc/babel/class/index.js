@@ -13,13 +13,8 @@ const sourceCode = `
   }
 `;
 
-
 const parseCode = core.transform(sourceCode, {
-  plugins: [
-    transformClassPlugin({
-      name: 'wang.haoyu',
-    }),
-  ],
+  plugins: [transformClassPlugin({})],
 });
 
-// console.log(parseCode.code, 'parseCode');
+console.log(parseCode.code, 'parseCode');

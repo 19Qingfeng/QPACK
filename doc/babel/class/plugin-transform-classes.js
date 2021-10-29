@@ -9,7 +9,7 @@ function transformClassPlugin({ name }) {
         const fns = [];
         const { node } = nodePath;
         // nodeId上存在当前类的名称 id: { type:'Identifier',name:'Person' }
-        const { id } = node;
+        const { id, parent } = node;
         const method = node.body.body;
         // 获得对应类上的方法
         method.forEach((classMethod) => {
@@ -19,7 +19,7 @@ function transformClassPlugin({ name }) {
             // 往同级别类节点上增加一个当前的函数声明
             const functionCode = generatorConstructFunction(
               classMethod,
-              'Person2'
+              classMethod.kind
             );
             fns.push(functionCode);
             // console.log(functionCode, 'functionCode');
@@ -28,14 +28,15 @@ function transformClassPlugin({ name }) {
             // nodePath.scope.push(functionCode);
           } else {
             // 不考虑静态 仅仅处理普通函数
-            fns.push(generatorPrototypeCode(classMethod, 'Person2'));
+            fns.push(generatorPrototypeCode(classMethod, classMethod.key.name));
           }
         });
-        // 尝试一下把fn生成
-        const babelGenerate = require('@babel/generator');
-        fns.forEach((fn) => {
-          console.log(babelGenerate.default(fn).code, '生成的code');
-        });
+        if (fns.length === 1) {
+          // 直接替换节点
+          nodePath.replaceWith(fns[0]);
+        } else if (fns.length > 1) {
+          nodePath.replaceWithMultiple(fns);
+        }
       },
     },
   };
