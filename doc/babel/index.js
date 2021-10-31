@@ -32,23 +32,12 @@ const babelTypes = require('@babel/types');
 // 转化箭头函数的插件
 const arrowFunction = require('@babel/plugin-transform-arrow-functions');
 
-// 自定义转化箭头函数插件
-const { arrowFunctionPlugin } = require('./arrow-function-expression')
-
-
-const sourceCode = `const a = () => {
-  console.log(this)
-  const innerA = () => {
-    console.log(this)
-  }
+const sourceCode = `const arrowFunc = () => {
+	console.log(this)
 }`;
 
 const targetCode = babel.transform(sourceCode, {
   plugins: [arrowFunction],
 });
 
-const targetCode2 = babel.transform(sourceCode, {
-  plugins: [arrowFunctionPlugin],
-});
-
-console.log(targetCode2.code,'targetCode2')
+console.log(targetCode.code);

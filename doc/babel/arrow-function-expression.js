@@ -23,20 +23,11 @@ function hoistFunctionEnvironment(nodePath) {
   // thisEnvFn中添加一个变量 变量名为 thisBindingsName 变量值为 this
   // 相当于 const _this = this
   thisEnvFn.scope.push({
+    // 调用babelTypes中生成对应节点
+    // 详细你可以在这里查阅到 https://babeljs.io/docs/en/babel-types
     id: babelTypes.Identifier(thisBindingsName),
     init: babelTypes.thisExpression(),
   });
-  // TODO: 不太理解 为什么作用域内部 path所有节点都会替换(traverse会拿到所有嵌套节点)
-  // TODO: 有BUG
-  /* 
-    const a = () => {
-      console.log(this, 'this');
-      function b() {
-        console.log(this, 'this');
-      }
-    };
-    这段代码转译后b函数中的this也变化了
-  */
   thisPaths.forEach((thisPath) => {
     // 将this替换称为_this
     const replaceNode = babelTypes.Identifier(thisBindingsName);
@@ -51,6 +42,8 @@ function hoistFunctionEnvironment(nodePath) {
  */
 function getScopeInfoInformation(nodePath) {
   const thisPaths = [];
+  // 调用nodePath中的traverse方法进行便利
+  // 你可以在这里查阅到  https://github.com/jamiebuilds/babel-handbook/blob/master/translations/zh-Hans/plugin-handbook.md
   nodePath.traverse({
     // 深度遍历节点路径 找到内部this语句
     ThisExpression(thisPath) {

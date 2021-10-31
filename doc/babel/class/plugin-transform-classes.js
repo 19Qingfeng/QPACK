@@ -1,7 +1,7 @@
 const babelTypes = require('@babel/types');
 
 function transformClassPlugin({ name }) {
-  console.log(name, 'params');
+  console.log(name, '接受的参数');
   return {
     visitor: {
       ClassDeclaration(nodePath) {
