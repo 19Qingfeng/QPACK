@@ -7,4 +7,10 @@ const compiler = webpack(config);
 // ... webpack.js
 // 步骤4: 调用compiler.run方法执行编译工作
 // 4.1 首先寻找入口文件 entry
-compiler.run();
+compiler.run((err, stats) => {
+  if (err) {
+    console.log(err, 'err');
+  }
+  const outputOptions = stats.toJson();
+  console.log(outputOptions, 'outputOptions');
+});

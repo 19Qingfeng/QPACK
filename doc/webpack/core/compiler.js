@@ -1,5 +1,5 @@
 const { SyncHook } = require('tapable');
-const { toUnixPath, tryExtensions } = require('../utils/index');
+const { toUnixPath, tryExtensions, getSourceCode } = require('../utils/index');
 const parser = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
 const generator = require('@babel/generator').default;
@@ -10,6 +10,9 @@ const fs = require('fs');
   真实源码中读取文件 多入口打包其实是可以并行的
   这里为了演示流程 所以使用同步代码
 */
+// TODO: 代码整理
+// TODO: 有问题 依赖会被相同入口引用时缺少
+// TODO: 有问题 循环依赖会导致爆栈
 class Compiler {
   constructor(options) {
     // 获取参数
@@ -24,7 +27,7 @@ class Compiler {
       done: new SyncHook(),
     };
     // 相对路径跟路径 Context参数
-    this.rootPath = this.options.context || process.cwd();
+    this.rootPath = this.options.context || toUnixPath(process.cwd());
     // 保存所有入口模块
     this.entries = new Set();
     // 保存所有依赖模块
@@ -36,24 +39,67 @@ class Compiler {
     // 存放本次编译所有产出的文件
     this.files = new Set();
   }
-  run() {
+  run(callback) {
     // 触发开始编译的plugin
     this.hooks.run.call();
     // 获取入口配置对象
     const entry = this.getEntry();
     // 从入口出发 编译相关所有模块
     this.buildEntryModule(entry);
+    // 导出列表;之后将每个chunk转化称为单独的文件加入到输出列表assets中
+    this.exportFile(callback);
   }
 
   // 编译入口文件
   buildEntryModule(entry) {
     Object.keys(entry).forEach((entryName) => {
       const entryPath = entry[entryName];
-      // 一个一个去编译
-      this.entries.add(this._buildEntryModule(entryName, entryPath));
+      // 一个一个入口去编译依赖关系
+      const entryModule = this._buildEntryModule(entryName, entryPath);
+      this.entries.add(entryModule);
+      // 根据当前入口文件和模块的相互依赖关系，组装成为一个个包含当前入口所有依赖模块的chunk
+      // TODO: 有问题 依赖会被相同入口引用时缺少
+      const chunk = {
+        name: entryName,
+        entryModule,
+        modules: Array.from(this.modules).filter((i) => i.name === entryName),
+      };
+      this.chunks.add(chunk);
     });
-    console.log(this.entries);
-    console.log(this.modules, 'modules');
+  }
+
+  // 将chunk加入输出列表中去
+  exportFile(callback) {
+    const output = this.options.output;
+    this.chunks.forEach((chunk) => {
+      const parseFileName = output.filename.replace('[name]', chunk.name);
+      // assets中 { 'main.js': '生成的字符串代码...' }
+      this.assets[parseFileName] = getSourceCode(chunk);
+    });
+    // 先判断目录是否存在 存在直接fs.write 不存在则首先创建
+    if (!fs.existsSync(output.path)) {
+      fs.mkdirSync(output.path);
+    }
+    // files中保存所有的生成文件名
+    this.files = Object.keys(this.assets);
+    // 将assets中的内容生成打包文件
+    Object.keys(this.assets).forEach((fileName) => {
+      const filePath = path.join(output.path, fileName);
+      fs.writeFileSync(filePath, this.assets[fileName]);
+    });
+    // 结束之后触发钩子
+    this.hooks.done.call();
+    callback(null, {
+      toJson: () => {
+        return {
+          entries: this.entries,
+          modules: this.modules,
+          files: this.files,
+          chunks: this.chunks,
+          assets: this.assets,
+        };
+      },
+    });
   }
 
   // 编译模块
@@ -101,9 +147,15 @@ class Compiler {
           // 生成moduleId - 针对于跟路径的模块ID 添加进入新的依赖模块路径
           const moduleId =
             './' + path.posix.relative(this.rootPath, absolutePath);
-          module.dependencies.add(moduleId);
+          // 通过babel修改require变成__webpack_require__语句
+          node.callee = t.identifier('__webpack_require__');
           // 通过修改require语句引入的模块 全部修改变为相对于跟路径来处理
           node.arguments = [t.stringLiteral(moduleId)];
+          // 解决多次引用相同模块 当前模块已经编译过的话那么就不进行依赖收集了
+          const alreadyModule = Array.from(this.modules).map((i) => i.id);
+          if (!alreadyModule.includes(moduleId)) {
+            module.dependencies.add(moduleId);
+          }
         }
       },
     });
@@ -111,7 +163,9 @@ class Compiler {
     const { code } = generator(ast);
     module._source = code; // 这个模块的源代码
     // 入口模块编译完成 接下来开始递归编译(深度优先)
+    // TODO: 有问题 循环依赖会导致爆栈
     module.dependencies.forEach((dependency) => {
+      // 每一个文件都会返回一个module对象--depModule
       const depModule = this._buildEntryModule(entryName, dependency);
       this.modules.add(depModule);
     });
