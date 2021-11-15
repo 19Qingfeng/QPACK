@@ -21,7 +21,7 @@ function _mergeOptions(options) {
     }
     return option;
   }, {});
-  return { ...shellOptions, options };
+  return { ...options, ...shellOptions };
 }
 
 // 加载插件函数
