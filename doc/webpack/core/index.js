@@ -1,4 +1,4 @@
-const webpack = require('./webpack');
+const webpack = require('webpack');
 // 步骤1: 初始化参数 根据配置文件和shell参数合成参数
 const config = require('../webpack.config.js');
 // 步骤2: 调用Webpack(options) 初始化compiler对象
@@ -12,5 +12,10 @@ compiler.run((err, stats) => {
     console.log(err, 'err');
   }
   const outputOptions = stats.toJson();
-  console.log(outputOptions, 'outputOptions');
+  Object.keys(outputOptions).forEach((key) => {
+    if (key === 'modules') {
+      // 实质上是没有entries的概念 全都是module
+      console.log(JSON.stringify(outputOptions.entrypoints));
+    }
+  });
 });

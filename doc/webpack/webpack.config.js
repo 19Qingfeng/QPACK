@@ -1,4 +1,5 @@
 const path = require('path');
+const EmitPlugins = require('./plugins/emit-plugin');
 
 // 插件A
 class PluginA {
@@ -34,7 +35,7 @@ module.exports = {
     path: path.resolve(__dirname, './build'),
     filename: '[name].js',
   },
-  plugins: [new PluginA(), new PluginB()],
+  plugins: [new PluginA(), new PluginB(), new EmitPlugins()],
   resolve: {
     extensions: ['.js', '.ts'],
   },

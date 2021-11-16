@@ -11,8 +11,8 @@ const fs = require('fs');
   这里为了演示流程 所以使用同步代码
 */
 // TODO: 代码整理
-// TODO: 有问题 依赖会被相同入口引用时缺少
-// TODO: 有问题 循环依赖会导致爆栈
+// TODO: 有问题 循环依赖会导致爆栈 解决方式: 目前想到通过cache形式
+// TODO: 同步sync变成异步处理
 class Compiler {
   constructor(options) {
     // 获取参数
@@ -62,7 +62,9 @@ class Compiler {
       const chunk = {
         name: entryName,
         entryModule,
-        modules: Array.from(this.modules).filter((i) => i.name === entryName),
+        modules: Array.from(this.modules).filter((i) =>
+          i.name.includes(entryName)
+        ),
       };
       this.chunks.add(chunk);
     });
@@ -71,6 +73,7 @@ class Compiler {
   // 将chunk加入输出列表中去
   exportFile(callback) {
     const output = this.options.output;
+    // 根据chunks生成assets内容
     this.chunks.forEach((chunk) => {
       const parseFileName = output.filename.replace('[name]', chunk.name);
       // assets中 { 'main.js': '生成的字符串代码...' }
@@ -81,8 +84,9 @@ class Compiler {
       fs.mkdirSync(output.path);
     }
     // files中保存所有的生成文件名
+    this.hooks.emit.call();
     this.files = Object.keys(this.assets);
-    // 将assets中的内容生成打包文件
+    // 将assets中的内容生成打包文件 写入文件系统中
     Object.keys(this.assets).forEach((fileName) => {
       const filePath = path.join(output.path, fileName);
       fs.writeFileSync(filePath, this.assets[fileName]);
@@ -118,10 +122,11 @@ class Compiler {
       同时 使用path.posix保证不同操作系统下的relative方法返回的分隔符都是'/'
     */
     const moduleId = './' + path.posix.relative(this.rootPath, entryPath);
+    // 创建模块对象
     const module = {
       id: moduleId,
-      dependencies: new Set(),
-      name: entryName,
+      dependencies: new Set(), // 依赖模块绝对路径地址
+      name: [entryName], // 该模块所属的入口文件
     };
     // AST分析模块代码 处理依赖关系
     const ast = parser.parse(this.moduleCode, {
@@ -153,8 +158,16 @@ class Compiler {
           node.arguments = [t.stringLiteral(moduleId)];
           // 解决多次引用相同模块 当前模块已经编译过的话那么就不进行依赖收集了
           const alreadyModule = Array.from(this.modules).map((i) => i.id);
+          // 依赖已经编译过一次 直接添加进入就好了
           if (!alreadyModule.includes(moduleId)) {
             module.dependencies.add(moduleId);
+          } else {
+            // 修改内部的当前文件
+            this.modules.forEach((value) => {
+              if (value.id === moduleId) {
+                value.name.push(entryName);
+              }
+            });
           }
         }
       },
@@ -165,7 +178,6 @@ class Compiler {
     // 入口模块编译完成 接下来开始递归编译(深度优先)
     // TODO: 有问题 循环依赖会导致爆栈
     module.dependencies.forEach((dependency) => {
-      // 每一个文件都会返回一个module对象--depModule
       const depModule = this._buildEntryModule(entryName, dependency);
       this.modules.add(depModule);
     });
