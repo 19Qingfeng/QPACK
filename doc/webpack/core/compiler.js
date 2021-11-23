@@ -36,7 +36,7 @@ class Compiler {
     this.chunks = new Set();
     // 存放本次产出的文件
     this.assets = new Set();
-    // 存放本次编译所有产出的文件
+    // 存放本次编译所有产出的文件名
     this.files = new Set();
   }
   run(callback) {
@@ -58,7 +58,6 @@ class Compiler {
       const entryModule = this._buildEntryModule(entryName, entryPath);
       this.entries.add(entryModule);
       // 根据当前入口文件和模块的相互依赖关系，组装成为一个个包含当前入口所有依赖模块的chunk
-      // TODO: 有问题 依赖会被相同入口引用时缺少
       const chunk = {
         name: entryName,
         entryModule,

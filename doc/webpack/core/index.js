@@ -1,4 +1,4 @@
-const webpack = require('webpack');
+const webpack = require('./webpack');
 // 步骤1: 初始化参数 根据配置文件和shell参数合成参数
 const config = require('../webpack.config.js');
 // 步骤2: 调用Webpack(options) 初始化compiler对象
