@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { runLoaders } = require('loader-runner');
+const { runLoaders } = require('./loader-runner');
 
 // 入口模块
 const filePath = path.resolve(__dirname, '../../src/index.js');
@@ -134,7 +134,6 @@ runLoaders(
 		);
 	}
 */
-console.log(filePath, 'filePath');
 // 运行loaders
 // console.log(fs.readFileSync(filePath), '内容');
 runLoaders(
@@ -146,8 +145,7 @@ runLoaders(
     // processResource 参数先忽略
   },
   (error, result) => {
-    console.log(error, '存在的错误');
-    console.log(result, '结果');
+    // console.log(error, '存在的错误');
+    // console.log(result, '结果');
   }
 );
-console.log(loaders, '35.xxx');
