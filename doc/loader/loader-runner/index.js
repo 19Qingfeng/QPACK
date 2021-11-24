@@ -140,6 +140,44 @@ function iteratePitchingLoaders(options, loaderContext, callback) {
   if (!pitchFunction) {
     return iteratePitchingLoaders(options, loaderContext, callback);
   }
+
+  // 执行loader 针对时同步还是异步的方式进行运行
+  runSyncOrAsync(
+    pitchFunction,
+    loaderContext,
+    [
+      currentLoaderObject.remainingRequest,
+      currentLoaderObject.previousRequest,
+      currentLoaderObject.data,
+    ],
+    function (err) {
+      if (err) {
+        // 存在错误直接调用callback
+        return callback(err);
+      }
+      // 根据返回值 判断是否需要熔断 or 继续往下执行下一个pitch
+      // pitch函数存在返回值 -> 进行熔断 掉头执行normal-loader
+      // pitch函数不存在返回值 -> 继续迭代下一个 iteratePitchLoader
+    }
+  );
+}
+
+/**
+ *
+ * 执行loader 同步/异步
+ * @param {*} fn 需要被执行的函数
+ * @param {*} context loader的上下文对象
+ * @param {*} args [remainingRequest,previousRequest,currentLoaderObj.data = {}]
+ * @param {*} callback 外部传入的callback (runLoaders方法的形参)
+ */
+function runSyncOrAsync(fn, context, args, callback) {
+  // 是否同步 默认同步loader 表示当前loader执行完自动依次迭代执行
+  let isSync = true;
+  // 表示传入的fn是否已经执行过了 用来标记重复执行
+  let isDone = false;
+  // 调用pitch-loader执行 将this传递成为loaderContext 同时传递三个参数
+  // 返回pitch函数的返回值 甄别是否进行熔断
+  const result = fn.apply(context, args);
 }
 
 /**
@@ -154,7 +192,7 @@ function createLoaderObject(loader) {
     // 在执行loader之前 webpack会讲一些资源文件转化称为字符串传递给loader
     // 如果不需要进行字符串转化 将raw制为true 将会传递buffer。比如加载图片时
     raw: null, // 是否需要将loader转化称为字符串 默认是字符串
-    data: null, // 每个loader的自定义数据对象，用来存放自定义信息
+    data: {}, // 每个loader的自定义数据对象，用来存放自定义信息
     pitchExecuted: false, // loader的pitch是否已经执行过
     normalExecuted: false, // 这个loader本身是否已经执行过
     request: loader, // 当前loader资源绝对路径
