@@ -138,7 +138,7 @@ function iterateNormalLoaders(options, loaderContext, args, callback) {
     return iterateNormalLoaders(options, loaderContext, args, callback);
   }
   // 根据loader中raw的值 格式化source
-  convertArgs(args, loaderContext.raw);
+  convertArgs(args, currentLoader.raw);
   // 执行loader
   runSyncOrAsync(normalFunction, loaderContext, args, (err, ...args) => {
     if (err) {

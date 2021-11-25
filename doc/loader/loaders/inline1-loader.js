@@ -1,5 +1,5 @@
 function loader(source) {
-  console.log('inline1');
+  console.log('source inline1:', source);
   return source + '//inline1';
 }
 
