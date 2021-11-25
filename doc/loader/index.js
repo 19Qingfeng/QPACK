@@ -86,54 +86,6 @@ if (request.startsWith('!!')) {
 
 loaders = loaders.map(resolveLoader);
 
-/* 
-  源码中
-runLoaders(
-			{
-				resource: this.resource,
-				loaders: this.loaders,
-				context: loaderContext,
-				processResource: (loaderContext, resourcePath, callback) => {
-					const resource = loaderContext.resource;
-					const scheme = getScheme(resource);
-					hooks.readResource
-						.for(scheme)
-						.callAsync(loaderContext, (err, result) => {
-							if (err) return callback(err);
-							if (typeof result !== "string" && !result) {
-								return callback(new UnhandledSchemeError(scheme, resource));
-							}
-							return callback(null, result);
-						});
-				}
-			},
-			(err, result) => {
-				// Cleanup loaderContext to avoid leaking memory in ICs
-				loaderContext._compilation =
-					loaderContext._compiler =
-					loaderContext._module =
-					loaderContext.fs =
-						undefined;
-
-				if (!result) {
-					this.buildInfo.cacheable = false;
-					return processResult(
-						err || new Error("No result from loader-runner processing"),
-						null
-					);
-				}
-				this.buildInfo.fileDependencies.addAll(result.fileDependencies);
-				this.buildInfo.contextDependencies.addAll(result.contextDependencies);
-				this.buildInfo.missingDependencies.addAll(result.missingDependencies);
-				for (const loader of this.loaders) {
-					this.buildInfo.buildDependencies.add(loader.loader);
-				}
-				this.buildInfo.cacheable = this.buildInfo.cacheable && result.cacheable;
-				processResult(err, result.result);
-			}
-		);
-	}
-*/
 // 运行loaders
 // console.log(fs.readFileSync(filePath), '内容');
 runLoaders(
@@ -146,6 +98,6 @@ runLoaders(
   },
   (error, result) => {
     // console.log(error, '存在的错误');
-    // console.log(result, '结果');
+    console.log(result, '结果');
   }
 );

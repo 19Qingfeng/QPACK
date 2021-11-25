@@ -3,4 +3,7 @@ function loader(source) {
   return source + '//pre2';
 }
 
+loader.pitch = function (remainingRequest, previousRequest, data) {
+  console.log('pre2-loader pitch');
+};
 module.exports = loader;

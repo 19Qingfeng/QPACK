@@ -77,7 +77,7 @@ function runLoaders(options, callback) {
     // 存储读取资源文件的二进制内容 (转化前 原始文件内容)
     resourceBuffer: null,
   };
-  // 迭代pitch-loader处理
+  // 迭代pitch-loader处理 pitching中会调用normal
   iteratePitchingLoaders(processOptions, loaderContext, (err, result) => {
     callback(err, {
       result,
@@ -104,11 +104,67 @@ function processResource(options, loaderContext, callback) {
     }
     // 保存原始文件内容的buffer
     options.resourceBuffer = buffer;
-    console.log(
-      options.resourceBuffer.toString(),
-      'pitch执行完毕 这里是buffer'
-    );
+    iterateNormalLoaders(options, loaderContext, [buffer], callback);
   });
+}
+
+/**
+ * 迭代normal-loaders 根据loaderIndex的值进行迭代
+ * 核心思路: 迭代完成pitch-loader之后 读取文件 迭代执行normal-loader
+ *          或者在pitch-loader中存在返回值 熔断执行normal-loader
+ * @param {*} options processOptions对象
+ * @param {*} loaderContext loader中的this对象
+ * @param {*} args [buffer/any]
+ * 当pitch阶段不存在返回值时 此时为即将处理的资源文件
+ * 当pitch阶段存在返回值时 此时为pitch阶段的返回值
+ * @param {*} callback runLoaders中的callback函数
+ */
+function iterateNormalLoaders(options, loaderContext, args, callback) {
+  // 如果已经超出loader下标
+  if (loaderContext.loaderIndex < 0) {
+    return callback(null, args);
+  }
+  const currentLoader = loaderContext.loaders[loaderContext.loaderIndex];
+  if (currentLoader.normalExecuted) {
+    loaderContext.loaderIndex--;
+    return iterateNormalLoaders(options, loaderContext, args, callback);
+  }
+
+  const normalFunction = currentLoader.normal;
+  // 标记为执行过
+  currentLoader.normalExecuted = true;
+  // 检查是否执行过
+  if (!normalFunction) {
+    return iterateNormalLoaders(options, loaderContext, args, callback);
+  }
+  // 根据loader中raw的值 格式化source
+  convertArgs(args, loaderContext.raw);
+  // 执行loader
+  runSyncOrAsync(normalFunction, loaderContext, args, (err, ...args) => {
+    if (err) {
+      return callback(err);
+    }
+    // 继续迭代 注意这里的args是处理过后的args
+    iterateNormalLoaders(options, loaderContext, args, callback);
+  });
+}
+
+/**
+ *
+ * 转化资源source的格式
+ * @param {*} args [资源]
+ * @param {*} raw Boolean 是否需要Buffer
+ * raw为true 表示需要一个Buffer
+ * raw为false表示不需要Buffer
+ */
+function convertArgs(args, raw) {
+  if (!raw && Buffer.isBuffer(args[0])) {
+    // 我不需要buffer
+    args[0] = args[0].toString();
+  } else if (raw && typeof args[0] === 'string') {
+    // 需要Buffer 资源文件是string类型 转化称为Buffer
+    args[0] = Buffer.from(args[0], 'utf8');
+  }
 }
 
 /**
@@ -150,7 +206,7 @@ function iteratePitchingLoaders(options, loaderContext, callback) {
       currentLoaderObject.previousRequest,
       currentLoaderObject.data,
     ],
-    function (err) {
+    function (err, ...args) {
       if (err) {
         // 存在错误直接调用callback
         return callback(err);
@@ -158,6 +214,16 @@ function iteratePitchingLoaders(options, loaderContext, callback) {
       // 根据返回值 判断是否需要熔断 or 继续往下执行下一个pitch
       // pitch函数存在返回值 -> 进行熔断 掉头执行normal-loader
       // pitch函数不存在返回值 -> 继续迭代下一个 iteratePitchLoader
+      const hasArg = args.some((i) => i !== undefined);
+      if (hasArg) {
+        // TODO: 如果第一个loader的pitch存在返回值 这里额外留意下源码
+        loaderContext.loaderIndex--;
+        // 熔断 直接返回调用normal-loader
+        iterateNormalLoaders(options, loaderContext, args, callback);
+      } else {
+        // 这个pitch-loader执行完毕后 继续调用下一个loader
+        iteratePitchingLoaders(options, loaderContext, callback);
+      }
     }
   );
 }
@@ -175,9 +241,44 @@ function runSyncOrAsync(fn, context, args, callback) {
   let isSync = true;
   // 表示传入的fn是否已经执行过了 用来标记重复执行
   let isDone = false;
+
+  // 定义 this.callback
+  // this.async 通过闭包访问调用innerCallback 表示异步loader执行完毕
+  const innerCallback = (context.callback = function () {
+    isDone = true;
+    // 这里该不该sync无所谓了其实 源码中有就加入吧
+    isSync = false;
+    callback(null, ...arguments);
+  });
+
+  // 定义异步 this.async
+  // 每次loader调用都会执行runSyncOrAsync都会重新定义一个context.async方法
+  context.async = function () {
+    isSync = false; // 将本次同步变更成为异步
+    return innerCallback;
+  };
+
   // 调用pitch-loader执行 将this传递成为loaderContext 同时传递三个参数
   // 返回pitch函数的返回值 甄别是否进行熔断
   const result = fn.apply(context, args);
+
+  if (isSync) {
+    isDone = true;
+    if (result === undefined) {
+      return callback();
+    }
+    // 如果 loader返回的是一个Promise 异步loader
+    if (
+      result &&
+      typeof result === 'object' &&
+      typeof result.then === 'function'
+    ) {
+      // 同样等待Promise结束后直接熔断 否则Reject 直接callback错误
+      return result.then((r) => callback(null, r), callback);
+    }
+    // 非Promise 切存在执行结果 进行熔断
+    return callback(null, result);
+  }
 }
 
 /**
