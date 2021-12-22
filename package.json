@@ -1,6 +1,6 @@
 {
   "name": "QPack",
-  "version": "1.0.0",
+  "version": "1.0.1-beta.0",
   "description": "Webpack源码解析.",
   "main": "wepback.config.js",
   "directories": {
