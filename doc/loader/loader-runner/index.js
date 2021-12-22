@@ -25,7 +25,7 @@ function runLoaders(options, callback) {
   loaderContext.async = null;
   loaderContext.callback = null;
   // request 保存所有loader路径和资源路径- 转化为inline-loader的形式
-  Object.defineProperty(loaderContext, 'request', {
+  Object.e(loaderContext, 'request', {
     enumerable: true,
     get: function () {
       return loaderContext.loaders
@@ -216,7 +216,6 @@ function iteratePitchingLoaders(options, loaderContext, callback) {
       // pitch函数不存在返回值 -> 继续迭代下一个 iteratePitchLoader
       const hasArg = args.some((i) => i !== undefined);
       if (hasArg) {
-        // TODO: 如果第一个loader的pitch存在返回值 这里额外留意下源码
         loaderContext.loaderIndex--;
         // 熔断 直接返回调用normal-loader
         iterateNormalLoaders(options, loaderContext, args, callback);

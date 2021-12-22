@@ -7,7 +7,6 @@ const filePath = path.resolve(__dirname, '../../src/index.js');
 
 // 模拟引入
 const request = 'inline1-loader!inline2-loader!./title.js';
-
 // 模拟webpack配置
 const rules = [
   // 普通loader
@@ -85,7 +84,7 @@ if (request.startsWith('!!')) {
 }
 
 loaders = loaders.map(resolveLoader);
-
+// console.log(loaders);
 // 运行loaders
 // console.log(fs.readFileSync(filePath), '内容');
 runLoaders(

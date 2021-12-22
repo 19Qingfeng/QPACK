@@ -10,7 +10,7 @@ loader.pitch = function () {
   return new Promise((resolve) => {
     setTimeout(() => {
       console.log('3s后 inline2 异步结束', Date.now());
-      resolve();
+      resolve(undefined);
     }, 3000);
   });
 };

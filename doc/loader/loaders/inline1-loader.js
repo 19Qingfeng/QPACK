@@ -4,11 +4,18 @@ function loader(source) {
 }
 
 loader.pitch = function () {
+  console.log(this, 'this 对象');
+  // console.log(this.getOptions(), 'options');
+  // console.log(this.getOptions(), 'options');
+  // console.log(this.getOptions(), 'options');
+  // console.log(this.getOptions(), 'options');
+
+  // console.log(this.getOptions(), 'options');
   const callback = this.async();
   console.log('异步loader开始');
   setTimeout(() => {
     console.log('异步pitch loader结束');
-    callback();
+    callback(undefined);
   }, 3000);
   console.log('inline1 pitch');
   // return 'pitch return on inline1';
