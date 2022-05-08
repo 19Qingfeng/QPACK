@@ -23,7 +23,7 @@ function runLoaders(options, callback) {
   loaderContext.data = null; // pitch中通过data传递给normal值
   // 异步loader属性
   loaderContext.async = null;
-  loaderContext.callback = null;
+  loaderContext.callback = null; // callback 同时支持多个参数传递，而同步仅仅支持一个参数
   // request 保存所有loader路径和资源路径- 转化为inline-loader的形式
   Object.e(loaderContext, 'request', {
     enumerable: true,
@@ -244,6 +244,10 @@ function runSyncOrAsync(fn, context, args, callback) {
   // 定义 this.callback
   // this.async 通过闭包访问调用innerCallback 表示异步loader执行完毕
   const innerCallback = (context.callback = function () {
+    if (isDone) {
+      // loader已经执行过了
+      new Error('current Loader already called!');
+    }
     isDone = true;
     // 这里该不该sync无所谓了其实 源码中有就加入吧
     isSync = false;
